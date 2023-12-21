@@ -1,0 +1,160 @@
+import matplotlib.cm as cm
+import matplotlib.colors as colors
+import networkx as nx
+import osmnx as ox
+import pandas as pd
+%matplotlib inline
+ox.config(log_console=True, use_cache=True)
+ox.__version__
+# download and project a street network
+G = ox.graph_from_place('Piedmont, California', network_type='drive')
+G = ox.project_graph(G)
+fig, ax = ox.plot_graph(G, bgcolor='k', node_size=30, node_color='#999999', node_edgecolor='none', node_zorder=2,
+edge_color='#555555', edge_linewidth=1.5, edge_alpha=1)
+Calculate and visualize node centrality
+# node closeness centrality
+node_centrality = nx.closeness_centrality(G)
+# plot it
+df = pd.DataFrame(data=pd.Series(node_centrality).sort_values(), columns=['cc'])
+df['colors'] = ox.get_colors(n=len(df), cmap='inferno', start=0.2)
+df = df.reindex(G.nodes())
+nc = df['colors'].tolist()
+fig, ax = ox.plot_graph(G, bgcolor='k', node_size=30, node_color=nc, node_edgecolor='none', node_zorder=2,
+edge_color='#555555', edge_linewidth=1.5, edge_alpha=1)
+Calculate and visualize edge centrality
+# edge closeness centrality: convert graph to a line graph so edges become nodes and vice versa
+edge_centrality = nx.closeness_centrality(nx.line_graph(G))
+# list of edge values for the orginal graph
+ev = [edge_centrality[edge + (0,)] for edge in G.edges()]
+
+# color scale converted to list of colors for graph edges
+norm = colors.Normalize(vmin=min(ev)*0.8, vmax=max(ev))
+cmap = cm.ScalarMappable(norm=norm, cmap=cm.inferno)
+ec = [cmap.to_rgba(cl) for cl in ev]
+
+# color the edges in the original graph with closeness centralities in the line graph
+fig, ax = ox.plot_graph(G, bgcolor='k', axis_off=True, node_size=0, node_color='w', node_edgecolor='gray', node_zorder=2,
+edge_color=ec, edge_linewidth=1.5, edge_alpha=1)
+# save a shapefile with centrality as node and edge attributes
+nx.set_node_attributes(G, node_centrality, 'node_centrality')
+nx.set_edge_attributes(G, edge_centrality, 'edge_centrality')
+ox.save_graph_shapefile(G)
+
+
+import ipyleaflet
+from ipyleaflet import Map, Marker, basemaps, basemap_to_tiles
+
+# Создайте карту для местности Уфы
+ufa_map = Map(center=(54.7388, 55.9721), zoom=12, basemap=basemap_to_tiles(basemaps.Stamen.Terrain))
+
+# Добавьте точки кафе на карту
+for cafe in cafes:
+marker = Marker(location=(cafe.geometry.y, cafe.geometry.x), title=cafe['name'])
+ufa_map.add_layer(marker)
+
+# Отобразите карту
+ufa_map
+
+
+
+
+# Установка необходимых библиотек
+!pip install geopandas folium
+
+import geopandas as gpd
+import folium
+
+# Загрузка данных из файла DBF с помощью geopandas
+file_path = "путь_к_вашему_файлу.dbf"
+gdf = gpd.read_file(file_path)
+
+# Визуализация данных на карте с использованием folium
+m = folium.Map(location=[gdf.geometry.centroid.y.mean(), gdf.geometry.centroid.x.mean()], zoom_start=12)
+
+for idx, row in gdf.iterrows():
+folium.Marker([row.geometry.centroid.y, row.geometry.centroid.x], popup=row['ваш_интересующий_атрибут']).add_to(m)
+
+# Отображение карты
+m
+
+
+
+
+
+
+
+import osmnx as ox
+import matplotlib.pyplot as plt
+import networkx as nx
+import folium
+
+# Укажите местоположение (город, страну, район) или координаты
+place_name = "Москва, Россия"
+graph = ox.graph_from_place(place_name, network_type='all')
+
+# Получите координаты баров (замените этот блок кода своими данными)
+bars = {'Bar1': (55.752, 37.621), 'Bar2': (55.755, 37.625), 'Bar3': (55.757, 37.620)}
+
+# Добавьте точки баров на граф
+for bar, coord in bars.items():
+x, y = ox.distance.nearest_nodes(graph, coord[1], coord[0])
+graph.add_node(x=x, y=y, bar_name=bar)
+
+# Постройте граф
+ox.plot_graph(ox.project_graph(graph))
+
+# Создайте карту folium с точками баров
+map_center = (sum(coord[0] for coord in bars.values()) / len(bars), sum(coord[1] for coord in bars.values()) / len(bars))
+m = folium.Map(location=map_center, zoom_start=15)
+
+for bar, coord in bars.items():
+folium.Marker(location=coord, popup=bar).add_to(m)
+
+# Отобразите карту
+m.save('bars_map.html')
+import osmnx as ox
+import folium
+
+# Укажите местоположение (город, страну, район) или координаты
+place_name = "Москва, Россия"
+
+# Получите данные о барах из OSM
+bars = ox.pois_from_place(place_name, amenities=['bar'])
+
+# Получите граф дорожной сети
+graph = ox.graph_from_place(place_name, network_type='all')
+
+# Постройте граф
+ox.plot_graph(ox.project_graph(graph))
+
+# Создайте карту folium с точками баров
+m = folium.Map(location=[bars['geometry'].y.mean(), bars['geometry'].x.mean()], zoom_start=15)
+
+for idx, bar in bars.iterrows():
+folium.Marker(location=[bar['geometry'].y, bar['geometry'].x], popup=bar['name']).add_to(m)
+
+# Отобразите карту
+m.save('bars_map.html')
+import osmnx as ox
+import folium
+
+# Укажите местоположение (город, страну, район) или координаты
+place_name = "Москва, Россия"
+
+# Получите данные о барах из OSM
+bars = ox.pois_from_place(place_name, tags={'amenity': 'bar'})
+
+# Получите граф дорожной сети
+graph = ox.graph_from_place(place_name, network_type='all')
+
+# Постройте граф
+ox.plot_graph(ox.project_graph(graph))
+
+# Создайте карту folium с точками баров
+m = folium.Map(location=[bars['geometry'].y.mean(), bars['geometry'].x.mean()], zoom_start=15)
+
+for idx, bar in bars.iterrows():
+folium.Marker(location=[bar['geometry'].y, bar['geometry'].x], popup=bar['name']).add_to(m)
+
+# Отобразите карту
+m.save('bars_map.html')
